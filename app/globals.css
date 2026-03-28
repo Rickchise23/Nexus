@@ -1,0 +1,7 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@200;300;400;500;600;700&family=JetBrains+Mono:wght@300;400&family=Outfit:wght@100;200;300;400&display=swap');
+
+body { background: #060608; color: #fff; overflow: hidden; cursor: none; }

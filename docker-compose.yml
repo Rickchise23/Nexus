@@ -1,0 +1,44 @@
+# Home stack for Mac Mini — use bridge + port mapping (not host network; host mode is unreliable on Docker Desktop for macOS).
+# Usage: docker compose up -d
+# HA: http://localhost:8123 — create a long-lived token under Profile → Security.
+
+services:
+  homeassistant:
+    image: ghcr.io/home-assistant/home-assistant:stable
+    container_name: homeassistant
+    volumes:
+      - ./ha-config:/config
+      - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
+    restart: unless-stopped
+    environment:
+      - TZ=America/Phoenix
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+    restart: unless-stopped
+
+  # Uncomment when RTSP sources are ready (Frigate needs Coral optional / CPU works for light loads).
+  # frigate:
+  #   image: ghcr.io/blakeblackshear/frigate:stable
+  #   container_name: frigate
+  #   privileged: true
+  #   shm_size: "256mb"
+  #   ports:
+  #     - "5000:5000"
+  #     - "8554:8554"
+  #     - "8555:8555/tcp"
+  #     - "8555:8555/udp"
+  #   volumes:
+  #     - ./frigate-config:/config
+  #     - /etc/localtime:/etc/localtime:ro
+  #   restart: unless-stopped

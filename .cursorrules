@@ -1,0 +1,141 @@
+# NEXUS - Home Operating System - Cursor Rules
+
+## What This Is
+A home operating system that runs on a Mac mini connected to a 65-inch TV. Controlled by phone. Powered by AI. Replaces smart home apps, dashboards, media queues, and scattered life signals with one unified ambient intelligent system.
+
+## Architecture
+
+### Three Layers
+1. **TV (Display Layer)** - Next.js fullscreen UI at localhost:3000/tv. Always-on. No cursor. Designed for 65 inches.
+2. **Phone (Controller)** - Mobile web UI at localhost:3000/controller. Controls TV via WebSocket. Drops content. Switches modes. Adds goals.
+3. **Mac Mini (Engine)** - Hosts everything. Next.js app + WebSocket server + SQLite database.
+
+### Running It
+- `npm run dev` - starts the Next.js app (TV UI + API routes)
+- `npm run ws` - starts the WebSocket server on port 8080 (run in separate terminal)
+- TV opens localhost:3000 in fullscreen/kiosk Chrome
+- Phone opens [mac-mini-ip]:3000/controller on the same network
+
+## Tech Stack
+- Next.js 14 (App Router)
+- TypeScript
+- Tailwind CSS
+- SQLite via better-sqlite3 (local persistence)
+- WebSocket via ws (phone-to-TV real-time)
+- APIs: OpenWeatherMap (weather), Finnhub (stocks)
+
+## Design Rules
+- 65-INCH TV. Everything must be readable from 10 feet away.
+- Massive typography. Outfit Ultra-Light for time/headings. DM Sans for body. JetBrains Mono for data labels.
+- Dark mode only. Background #060608. No pure white text. Max opacity 0.95.
+- Smooth transitions. Everything animates. Mode changes take 3 seconds to transition colors.
+- Ambient feel. Floating orbs, breathing dots, gentle motion. It should feel alive, not static.
+- No cursor. No scrollbars. No browser chrome. This is a TV OS, not a website.
+- Mode colors: Morning #f59e0b, Focus #06b6d4, Home #10b981, Evening #8b5cf6, Weekend #f59e0b, Night #6366f1
+
+## Mode Engine
+Auto-switches based on time of day:
+- 5-9 AM: Morning (stocks, goals, calendar)
+- 9-5 PM weekdays: Focus (minimal, calendar, signals)
+- 9-8 PM weekends: Weekend (sports, projects, recipes)
+- 5-8 PM: Home (family schedule, recipes, deliveries)
+- 8-11 PM: Evening (content queue, wind down)
+- 11 PM-5 AM: Night (ultra minimal ambient)
+
+Override via phone controller or keyboard (1-6 keys, 0 for auto).
+
+## Data Flow
+- Weather: GET /api/weather (cached 10min, OpenWeatherMap)
+- Content: CRUD /api/content (SQLite, phone drops via POST)
+- Goals: CRUD /api/calendar (SQLite, daily reset)
+- Signals: CRUD /api/signals (SQLite, business alerts from Ralli/Toscana/Launch Pad)
+- Stocks: GET /api/stocks (cached 5min, Finnhub)
+- All APIs return mock data when no API keys configured. Always works.
+
+## WebSocket Protocol
+Phone and TV communicate via ws://localhost:8080. Message types:
+- mode_switch: { type, mode } - switch TV mode
+- mode_auto: { type } - return to auto mode
+- content_drop: { type, url, title? } - drop content into queue
+- content_play: { type, id } - play content on TV
+- goal_toggle: { type, id } - check/uncheck goal
+- goal_add: { type, label } - add new goal
+- signal_dismiss: { type, id } - dismiss a signal
+- refresh: { type } - force data refresh
+
+## TV Views
+- **Pulse** (default): Ambient screensaver. Giant clock. Weather. Signal ticker. Next event.
+- **Dashboard** (press P): Two-column layout. Left: time, calendar, goals. Right: signals, content queue, mode tiles.
+- **Content** (press C): Full-screen content browser overlay.
+
+## File Structure
+```
+app/
+  page.tsx              -> root (same as TV)
+  layout.tsx
+  globals.css
+  tv/page.tsx           -> TV kiosk route
+  controller/page.tsx   -> Phone controller
+  api/
+    weather/route.ts
+    content/route.ts
+    signals/route.ts
+    calendar/route.ts
+    stocks/route.ts
+src/
+  components/NexusTV.tsx -> Main TV UI component
+  lib/
+    db.ts               -> SQLite database layer
+    mode-engine.ts      -> Mode determination logic
+    ws-server.mjs       -> WebSocket server (standalone)
+  hooks/
+    useNexusSocket.ts   -> WebSocket client hook
+    useNexusData.ts     -> Data fetching + polling hook
+  types/
+    nexus.ts            -> All TypeScript types
+```
+
+## What's Next (Phase 2)
+- Wire NexusTV.tsx to useNexusData() hook instead of mock data
+- Wire NexusTV.tsx to useNexusSocket() to receive phone commands
+- Google Calendar API integration (real events)
+- Home Assistant integration (lights, cameras, devices)
+- Tailscale for remote access
+- YouTube oEmbed for auto-fetching video titles/thumbnails on content drop
+- Profile system (Rick vs Nicole, different tiles/signals per user)
+
+## What's Next (Phase 3 - Intelligence Layer)
+- Claude agent integration for suggested actions
+- "Ask Nexus" voice/text command from phone
+- Event-driven automation (e.g. if temp > 110, show AC alert)
+- Content prioritization (AI suggests what to watch based on goals)
+- Ralli AI / Launch Pad / Toscana live signal ingestion via webhooks
+
+## SECURITY: Pre-Deploy Checklist
+Before shipping code, verify:
+1. No secrets in client code (API keys, tokens, passwords)
+2. No auth tokens in localStorage (use httpOnly cookies)
+3. All API routes have auth middleware
+4. Rate limiting on public endpoints
+5. CORS configured with explicit domains (no wildcard *)
+6. All user input validated on backend
+7. No dangerouslySetInnerHTML without sanitization
+8. Environment variables for all config
+9. npm audit shows no critical vulnerabilities
+10. Supabase RLS enabled on every table
+Run `./scripts/security-check.sh` before every deploy.
+
+## Ralph (Autonomous Agent Loop)
+This project has Ralph installed at scripts/ralph/.
+To run autonomous builds:
+1. Create a PRD: describe features as user stories in prd.json
+2. Run: ./scripts/ralph/ralph.sh --tool claude 15
+3. Ralph loops: pick task → implement → test → commit → next task
+4. Review the feature branch when done
+Each story should be small enough for one context window.
+
+## Quality Checks (used by Ralph and manual deploys)
+- `npx tsc --noEmit` (TypeScript)
+- `npx next lint` (ESLint)
+- `./scripts/security-check.sh` (Security)
+- `npm test` (Tests, if they exist)
