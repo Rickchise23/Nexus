@@ -13,10 +13,10 @@ gh auth login
 gh repo create nexus --private --source=. --remote=origin --push
 ```
 
-Or create an empty repo on github.com, then:
+Remote (this project): [github.com/Rickchise23/Nexus](https://github.com/Rickchise23/Nexus)
 
 ```bash
-git remote add origin https://github.com/YOUR_USER/nexus.git
+git remote add origin https://github.com/Rickchise23/Nexus.git
 git push -u origin main
 ```
 
