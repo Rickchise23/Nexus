@@ -13,13 +13,14 @@
     "docker:down": "docker compose down",
     "check:env": "node scripts/check-env.cjs",
     "preflight": "node scripts/check-env.cjs",
+    "verify": "npm run build && npx tsc --noEmit && npm run check:env && ./scripts/security-check.sh",
     "ws": "node src/lib/ws-server.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.1",
     "better-sqlite3": "^11.0.0",
     "lucide-react": "^0.468.0",
-    "next": "^14.2.0",
+    "next": "14.2.35",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
     "recharts": "^2.15.0",

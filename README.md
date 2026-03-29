@@ -20,46 +20,59 @@ git remote add origin https://github.com/Rickchise23/Nexus.git
 git push -u origin main
 ```
 
-## Two UIs (don’t mix them up)
+## One unified TV app
 
-| URL | What it is |
-|-----|------------|
-| **`/`** (TV) | Pulse / Dashboard — **phone controller** at `/controller` talks to this via **WebSocket port 8080**. |
-| **`/os`** | Nexus OS (Home Assistant shell) — uses **HTTP + SSE** to `/api/ha/*`. The **phone controller does not drive `/os`** yet. |
+**`/`** and **`/os`** both load the same **NexusOS** shell: **Pulse** (ambient clock + signals) plus **Home / Energy / Cameras / Automations / System**. Home Assistant is reached via the sidebar modules and `/api/ha/*` (HTTP + SSE), not a separate app.
+
+| URL | Role |
+|-----|------|
+| **`/`** | Main TV — fullscreen Chrome on the Mac mini |
+| **`/controller`** | Phone — WebSocket **port 8080** switches modules, modes, content, goals |
+| **`/tv`** | Legacy **NexusTV** only (optional) |
+
+**`/controller`** must reach **`ws://<same-host>:8080`** (the standalone WS process). If you only run `next dev`, the controller stays **Disconnected**.
+
+## Before the Mac mini (do this on your dev machine)
+
+1. **`git pull`** so the mini clones the same `main` you verified.
+2. **`npm ci`** (or `npm install`) then **`npm run verify`** — runs `build` → `tsc` → **`check:env`** → **`security-check`**. Fix anything that fails before you rely on the TV.
+3. Copy **`.env.example` → `.env.local`** and fill what you can; keep secrets out of git. Use a password manager for **HA long-lived token** so you can paste it on the mini in seconds.
+4. Rehearse **`npm run dev:all`** once: open **`/`** (Pulse + sidebar) and **`/controller`** on your phone on the same Wi‑Fi — **Connected** and module buttons should change the TV.
+5. Note the **LAN IP** you will use on the mini (`http://<ip>:3000`, `http://<ip>:3000/controller`). Plan **DHCP reservation** or static IP.
+6. Optional: add **`/controller`** to the iPhone home screen (PWA) after the mini is up — **Share → Add to Home Screen**.
+
+On the mini you will: clone/pull, `.env.local`, **`npm ci && npm run build && npm run start:all`** (or `launchd` with `start:all`), allow **3000** + **8080** through the firewall for LAN access. See **`MAC_MINI_SETUP.md`**.
 
 ## Quick Start
 
 ```bash
 npm install
-npm run build          # verify production build
+npm run verify    # build + typecheck + env report + security script (see Before the Mac mini)
 cp .env.example .env.local
-# Add your API keys (or skip for mock data)
+# Add API keys on the machine that runs Next (or skip for mock data)
 ```
 
-**Phone + TV control (Pulse/Dashboard):** run **both** Next.js and the WebSocket server — one command:
+**Phone + TV:** run Next and the WebSocket together:
 
 ```bash
 npm run dev:all
 ```
 
-Or two terminals: `npm run dev` and `npm run ws`. If you only start Next, **`/controller` shows Disconnected** and TV buttons from the phone won’t work.
+Or two terminals: `npm run dev` and `npm run ws`.
 
-**Production on the Mac mini:** `npm run build && npm run start:all` (or `start:all` in LaunchAgent).
+**Production on the Mac mini:** `npm run build && npm run start:all` (or `start:all` in LaunchAgent — see `scripts/com.nexus.next.plist.example`).
 
-**Nexus OS (HA):** `http://localhost:3000/os` — needs `HA_URL` + `HA_TOKEN` in `.env.local` for real devices.
+**TV:** `http://localhost:3000` in fullscreen Chrome on the Mac mini.  
+**Phone:** `http://<mac-mini-ip>:3000/controller` on the same network.
 
-**TV:** Open `localhost:3000` in fullscreen Chrome on the Mac mini.
-**Phone:** Open `[mac-mini-ip]:3000/controller` on your phone's browser.
+## Keyboard (TV, NexusOS)
 
-## Keyboard Controls (TV)
-
-- `P` - Toggle Pulse / Dashboard view
-- `C` - Open content overlay
-- `1-6` - Switch modes (Morning, Focus, Home, Evening, Weekend, Night)
-- `0` - Return to auto mode
+- **`P` `H` `E` `C` `A` `S`** — switch module (Pulse, Home, Energy, Cameras, Automations, System)
+- **`1`–`6`** — mode override (Morning … Night); **`0`** — auto mode
+- **`⌘K`** — command palette · **`⌘J`** — Agent Bay · **`Esc`** — close overlays
 
 ## Architecture
 
-Mac mini runs everything. TV displays. Phone controls. SQLite persists. WebSocket connects.
+Mac mini runs everything. TV displays. Phone controls via WebSocket. SQLite persists. HA is server-side only (`HA_URL` + `HA_TOKEN` in `.env.local`).
 
 Built by Ralli AI.

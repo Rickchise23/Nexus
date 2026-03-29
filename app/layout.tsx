@@ -1,5 +1,6 @@
 import './globals.css';
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 
 export const metadata: Metadata = {
   title: 'Nexus',
@@ -28,11 +29,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="antialiased">
         {children}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}`,
-          }}
-        />
+        <Script id="nexus-sw-register" strategy="afterInteractive">
+          {`if('serviceWorker' in navigator){navigator.serviceWorker.register('/sw.js').catch(()=>{})}`}
+        </Script>
       </body>
     </html>
   );

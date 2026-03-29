@@ -10,7 +10,7 @@ Doing this now saves time when you plug in the brain:
 2. **Install the Docker Desktop .dmg** ahead of time (you already have it in Downloads) so you are not waiting on a large download.
 3. **Apple ID / App Store** signed in on the mini if you will install tools from the store.
 4. **Homebrew** (optional but common): install Node LTS on the mini with `brew install node` so `npm` lives at `/opt/homebrew/bin/npm` (matches the LaunchAgent example).
-5. On your **current** machine, run **`npm run build`** once before copying the folder — catches TypeScript errors early. After `git clone` on the mini you will run `npm install && npm run build` there anyway.
+5. On your **current** machine, run **`npm run verify`** (`build` + `tsc` + `check:env` + `scripts/security-check.sh`) — catches TypeScript and env issues before the mini. After `git clone` on the mini, run **`npm ci && npm run verify`** once dependencies are installed.
 
 ---
 

@@ -64,6 +64,11 @@ const groups = [
     keys: ['MQTT_HOST', 'MQTT_URL'],
     note: 'Optional — matches Mosquitto in docker-compose',
   },
+  {
+    title: 'Weather & stocks (Pulse / APIs)',
+    keys: ['WEATHER_API_KEY', 'STOCKS_API_KEY'],
+    note: 'Optional — APIs return mock data when unset',
+  },
 ];
 
 console.log('Nexus — environment check (.env.local)\n');

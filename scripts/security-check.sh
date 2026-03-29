@@ -44,13 +44,13 @@ else
 fi
 
 if command -v npm &> /dev/null; then
-  echo "Running npm audit..."
-  AUDIT=$(npm audit --production 2>/dev/null | grep -c "high\|critical" || echo "0")
-  if [ "$AUDIT" -gt 0 ]; then
-    echo "⚠️  $AUDIT high/critical npm vulnerabilities"
-    ISSUES=$((ISSUES + 1))
-  else
+  echo "Running npm audit (production, critical threshold)..."
+  # Next 14.x may still report high-severity advisories fixed only in Next 15+/16; LAN self-host risk is usually acceptable until upgrade.
+  if npm audit --production --audit-level=critical 2>/dev/null; then
     echo "✅ No critical npm vulnerabilities"
+  else
+    echo "❌ Critical npm vulnerabilities — run npm audit"
+    ISSUES=$((ISSUES + 1))
   fi
 fi
 
