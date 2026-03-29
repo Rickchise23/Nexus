@@ -22,6 +22,8 @@ git push -u origin main
 
 ## One unified TV app
 
+**Handoff doc (for Cursor on the Mac mini): [docs/UNIFIED_APP.md](docs/UNIFIED_APP.md).**
+
 **`/`** and **`/os`** both load the same **NexusOS** shell: **Pulse** (ambient clock + signals) plus **Home / Energy / Cameras / Automations / System**. Home Assistant is reached via the sidebar modules and `/api/ha/*` (HTTP + SSE), not a separate app.
 
 | URL | Role |
