@@ -20,6 +20,13 @@ git remote add origin https://github.com/Rickchise23/Nexus.git
 git push -u origin main
 ```
 
+## Two UIs (don’t mix them up)
+
+| URL | What it is |
+|-----|------------|
+| **`/`** (TV) | Pulse / Dashboard — **phone controller** at `/controller` talks to this via **WebSocket port 8080**. |
+| **`/os`** | Nexus OS (Home Assistant shell) — uses **HTTP + SSE** to `/api/ha/*`. The **phone controller does not drive `/os`** yet. |
+
 ## Quick Start
 
 ```bash
@@ -27,11 +34,19 @@ npm install
 npm run build          # verify production build
 cp .env.example .env.local
 # Add your API keys (or skip for mock data)
-npm run dev    # Terminal 1: Next.js app
-npm run ws     # Terminal 2: WebSocket server
 ```
 
-**Nexus OS UI:** `http://localhost:3000/os`
+**Phone + TV control (Pulse/Dashboard):** run **both** Next.js and the WebSocket server — one command:
+
+```bash
+npm run dev:all
+```
+
+Or two terminals: `npm run dev` and `npm run ws`. If you only start Next, **`/controller` shows Disconnected** and TV buttons from the phone won’t work.
+
+**Production on the Mac mini:** `npm run build && npm run start:all` (or `start:all` in LaunchAgent).
+
+**Nexus OS (HA):** `http://localhost:3000/os` — needs `HA_URL` + `HA_TOKEN` in `.env.local` for real devices.
 
 **TV:** Open `localhost:3000` in fullscreen Chrome on the Mac mini.
 **Phone:** Open `[mac-mini-ip]:3000/controller` on your phone's browser.

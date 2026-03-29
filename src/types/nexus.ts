@@ -96,6 +96,7 @@ export type WSMessage =
   | { type: "signal_next" }
   | { type: "refresh" }
   | { type: "view_toggle"; view: "pulse" | "dashboard" }
+  | { type: "module_switch"; module: string }
   | { type: "state_update"; state: Partial<NexusState> }
   | { type: "connected"; timestamp: string }
   | { type: "deploy_result"; ok: boolean; message?: string }

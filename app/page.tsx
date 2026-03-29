@@ -1,3 +1,3 @@
 'use client';
-import NexusTV from '@/components/NexusTV';
-export default function Home() { return <NexusTV />; }
+import NexusOS from '@/components/NexusOS';
+export default function Home() { return <NexusOS />; }

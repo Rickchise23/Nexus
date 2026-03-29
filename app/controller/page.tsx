@@ -23,10 +23,10 @@ export default function Controller() {
 
   useEffect(() => {
     const connect = () => {
-      // Connect to WS server on the Mac mini's local IP
-      const wsUrl = typeof window !== 'undefined'
-        ? `ws://${window.location.hostname}:8080`
-        : 'ws://localhost:8080';
+      // Phone + TV must reach the standalone WS process (port 8080). Run: npm run dev:all or npm run ws
+      const wsUrl =
+        process.env.NEXT_PUBLIC_WS_URL ||
+        `ws://${window.location.hostname}:8080`;
 
       const ws = new WebSocket(wsUrl);
       ws.onopen = () => { setConnected(true); addLog('Connected to Nexus'); };
@@ -133,10 +133,18 @@ export default function Controller() {
       <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400&family=Outfit:wght@100;200;300&display=swap');`}</style>
 
       {/* Header */}
+      {!connected && (
+        <div style={{ marginBottom: 16, padding: 14, borderRadius: 12, background: 'rgba(255,82,82,0.12)', border: '1px solid rgba(255,82,82,0.35)', fontSize: 12, lineHeight: 1.5, color: 'rgba(255,255,255,0.85)' }}>
+          <strong style={{ color: '#ff8a80' }}>WebSocket disconnected.</strong> Start both servers on the Mac mini:{' '}
+          <code style={{ fontFamily: 'JetBrains Mono', fontSize: 11, color: '#a5d6ff' }}>npm run dev:all</code>.
+          Allow ports 3000 and 8080 in macOS Firewall for LAN access.
+        </div>
+      )}
+
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
         <div>
           <div style={{ fontFamily: 'Outfit', fontWeight: 100, fontSize: 18, color: '#fff', letterSpacing: '0.3em' }}>NEXUS</div>
-          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>Controller</div>
+          <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono' }}>Controller → TV</div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <div style={{ width: 8, height: 8, borderRadius: '50%', background: connected ? '#00c853' : '#ff5252', boxShadow: connected ? '0 0 8px #00c853' : 'none' }}/>
@@ -146,16 +154,24 @@ export default function Controller() {
         </div>
       </div>
 
-      {/* View Toggle */}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-        <button onClick={() => send({ type: 'view_toggle', view: 'pulse' })}
-          style={{ flex: 1, padding: '14px 0', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-          Pulse
-        </button>
-        <button onClick={() => send({ type: 'view_toggle', view: 'dashboard' })}
-          style={{ flex: 1, padding: '14px 0', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, fontWeight: 500 }}>
-          Dashboard
-        </button>
+      {/* Module Switcher */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono', letterSpacing: '0.15em', marginBottom: 10, textTransform: 'uppercase' }}>Modules</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+          {[
+            { id: 'pulse', label: 'Pulse', color: '#6366f1' },
+            { id: 'home', label: 'Home', color: '#10b981' },
+            { id: 'energy', label: 'Energy', color: '#f59e0b' },
+            { id: 'cameras', label: 'Cameras', color: '#ef4444' },
+            { id: 'automations', label: 'Auto', color: '#06b6d4' },
+            { id: 'system', label: 'System', color: '#8b5cf6' },
+          ].map((m) => (
+            <button type="button" key={m.id} disabled={!connected} onClick={() => send({ type: 'module_switch', module: m.id })}
+              style={{ padding: '14px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', opacity: connected ? 1 : 0.45 }}>
+              <div style={{ fontSize: 12, color: m.color, fontFamily: 'JetBrains Mono', fontWeight: 500 }}>{m.label}</div>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Mode Switcher */}
@@ -163,15 +179,15 @@ export default function Controller() {
         <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.3)', fontFamily: 'JetBrains Mono', letterSpacing: '0.15em', marginBottom: 10, textTransform: 'uppercase' }}>Mode</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
           {modes.map(m => (
-            <button key={m.key} onClick={() => send({ type: 'mode_switch', mode: m.key })}
-              style={{ padding: '14px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center' }}>
+            <button type="button" key={m.key} disabled={!connected} onClick={() => send({ type: 'mode_switch', mode: m.key })}
+              style={{ padding: '14px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', textAlign: 'center', opacity: connected ? 1 : 0.45 }}>
               <div style={{ fontSize: 20, marginBottom: 4 }}>{m.icon}</div>
               <div style={{ fontSize: 11, color: m.color, fontFamily: 'JetBrains Mono' }}>{m.label}</div>
             </button>
           ))}
         </div>
-        <button onClick={() => send({ type: 'mode_auto' })}
-          style={{ width: '100%', padding: '10px 0', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 8 }}>
+        <button type="button" disabled={!connected} onClick={() => send({ type: 'mode_auto' })}
+          style={{ width: '100%', padding: '10px 0', borderRadius: 12, background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.3)', fontSize: 12, marginTop: 8, opacity: connected ? 1 : 0.45 }}>
           Auto Mode (time-based)
         </button>
       </div>
@@ -183,13 +199,13 @@ export default function Controller() {
           style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, marginBottom: 8, boxSizing: 'border-box', outline: 'none' }}/>
         <input value={dropTitle} onChange={e => setDropTitle(e.target.value)} placeholder="Title (optional, we'll auto-detect)"
           style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, marginBottom: 8, boxSizing: 'border-box', outline: 'none' }}/>
-        <button onClick={() => {
+        <button type="button" disabled={!connected} onClick={() => {
           if (dropUrl.trim()) {
             send({ type: 'content_drop', url: dropUrl.trim(), title: dropTitle.trim() || undefined });
             setDropUrl(''); setDropTitle('');
           }
         }}
-          style={{ width: '100%', padding: '14px 0', borderRadius: 12, background: '#06b6d4', color: '#fff', fontSize: 14, fontWeight: 600, border: 'none' }}>
+          style={{ width: '100%', padding: '14px 0', borderRadius: 12, background: '#06b6d4', color: '#fff', fontSize: 14, fontWeight: 600, border: 'none', opacity: connected ? 1 : 0.45 }}>
           Drop Into Nexus
         </button>
       </div>
@@ -206,13 +222,13 @@ export default function Controller() {
               }
             }}
             style={{ flex: 1, padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: '#fff', fontSize: 14, outline: 'none' }}/>
-          <button onClick={() => {
+          <button type="button" disabled={!connected} onClick={() => {
             if (goalInput.trim()) {
               send({ type: 'goal_add', label: goalInput.trim() });
               setGoalInput('');
             }
           }}
-            style={{ padding: '12px 20px', borderRadius: 12, background: '#06b6d4', color: '#fff', fontSize: 14, fontWeight: 600, border: 'none' }}>
+            style={{ padding: '12px 20px', borderRadius: 12, background: '#06b6d4', color: '#fff', fontSize: 14, fontWeight: 600, border: 'none', opacity: connected ? 1 : 0.45 }}>
             +
           </button>
         </div>
@@ -283,8 +299,8 @@ export default function Controller() {
             { label: 'Next Signal', action: () => send({ type: 'signal_next' }) },
             { label: 'Dismiss Signal', action: () => send({ type: 'signal_dismiss', id: 'current' }) },
           ].map((a, i) => (
-            <button key={i} onClick={a.action}
-              style={{ padding: '14px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500 }}>
+            <button type="button" key={i} disabled={!connected} onClick={a.action}
+              style={{ padding: '14px 8px', borderRadius: 12, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontWeight: 500, opacity: connected ? 1 : 0.45 }}>
               {a.label}
             </button>
           ))}

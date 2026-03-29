@@ -41,35 +41,49 @@ In `.env.local` set:
 - `HA_URL=http://127.0.0.1:8123` (or the LAN IP of this Mac from other devices)
 - `HA_TOKEN=<your token>`
 
-Restart `npm run dev` after changing env.
+Restart `npm run dev:all` (or `npm run start:all`) after changing env.
 
 ## 6. Frigate (optional)
 
 Uncomment the `frigate` service in `docker-compose.yml`, add `./frigate-config/config.yml`, then set `FRIGATE_URL=http://127.0.0.1:5000` in `.env.local`.
 
-## 7. Open Nexus OS UI
+## 7. Run Next.js + WebSocket (phone controller)
 
-`http://localhost:3000/os` — modules auto-detect HA; without credentials they use mock data.
-
-## 8. Production Next.js on the Mac
+The **controller** (`/controller`) requires the **WS server on port 8080**, not only Next on 3000:
 
 ```bash
-npm run build && npm run start
+npm run dev:all
+# or production:
+npm run build && npm run start:all
 ```
 
+If the phone shows **Disconnected**, the WS process isn’t running or macOS Firewall is blocking **8080** (and **3000**) on the LAN.
+
+## 8. Open Nexus OS UI
+
+`http://localhost:3000/os` — Home Assistant shell (separate from the Pulse TV + phone controller). Modules auto-detect HA; without credentials they use mock data.
+
+## 9. Production Next.js on the Mac
+
+```bash
+npm run build && npm run start:all
+```
+
+(`start:all` runs **Next + WebSocket** so the phone controller keeps working.)
+
 - **`npm run check:env`** — prints which `.env.local` keys are set (never shows secrets). Run anytime after editing env.
-- **Auto-start on login:** copy `scripts/com.nexus.next.plist.example` to `~/Library/LaunchAgents/com.nexus.next.plist`, replace `YOUR_USER` and the repo path, fix the `npm` path with `which npm`, run `launchctl load ~/Library/LaunchAgents/com.nexus.next.plist`. Requires a successful **`npm run build`** first.
+- **Auto-start on login:** copy `scripts/com.nexus.next.plist.example` to `~/Library/LaunchAgents/com.nexus.next.plist`, set **ProgramArguments** to `run`, `start:all` (see plist comments), replace `YOUR_USER` and the repo path, fix the `npm` path with `which npm`, run `launchctl load ~/Library/LaunchAgents/com.nexus.next.plist`. Requires a successful **`npm run build`** first.
 
-For TV fullscreen, open `/os` in Chrome kiosk mode.
+For TV fullscreen: **Pulse + phone** → open `/` ; **Nexus OS (HA)** → open `/os` in Chrome kiosk mode.
 
-## 9. Remote access (later)
+## 10. Remote access (later)
 
 Use Cloudflare Tunnel or Tailscale so Vercel or your phone can reach `HA_URL` securely — do not expose HA raw to the public internet without TLS and auth.
 
-## 10. Matter / Thread
+## 11. Matter / Thread
 
 Home Assistant integrates Matter; entities appear like any other. Thread border routing often uses Apple TV or HomePod Mini on the same Apple Home.
 
-## 11. Zigbee / USB (optional)
+## 12. Zigbee / USB (optional)
 
 If you use a USB coordinator (e.g. ZBT-2), pass it through to the Home Assistant container with Docker Desktop device mapping, or run ZHA on a separate host and point HA at it over the network.

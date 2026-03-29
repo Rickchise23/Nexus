@@ -17,6 +17,9 @@ import {
   LayoutDashboard, Workflow, MessageSquare, Sparkles
 } from "lucide-react";
 import { AreaChart, Area, BarChart, Bar, LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
+import { useNexusData } from "@/hooks/useNexusData";
+import { useNexusSocket } from "@/hooks/useNexusSocket";
+import { determineMode, getGreeting } from "@/lib/mode-engine";
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // NEXUS OS — Unified Smart Home Command Center
@@ -1269,10 +1272,162 @@ const CommandPalette = ({ isOpen, onClose, onNavigate, onAgentCommand }) => {
 };
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// MODULE: PULSE — Ambient Clock / Weather / Signals / Goals
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const MODE_COLORS = {
+  morning: { label: "Morning", color: "#f59e0b" },
+  focus: { label: "Focus", color: "#06b6d4" },
+  home: { label: "Home", color: "#10b981" },
+  evening: { label: "Evening", color: "#8b5cf6" },
+  weekend: { label: "Weekend", color: "#f59e0b" },
+  night: { label: "Night", color: "#6366f1" },
+};
+
+const PulseModule = ({ weather, signals, goals, content, stocks, nexusMode, modeOverride }) => {
+  const [signalIndex, setSignalIndex] = useState(0);
+  const signalsRef = useRef(signals);
+  signalsRef.current = signals;
+
+  useEffect(() => {
+    if (signals.length === 0) { setSignalIndex(0); return; }
+    setSignalIndex((i) => Math.min(i, signals.length - 1));
+  }, [signals.length]);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const n = signalsRef.current.length;
+      if (n <= 1) return;
+      setSignalIndex((p) => (p + 1) % n);
+    }, 6000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const now = new Date();
+  const h = now.getHours();
+  const timeStr = now.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  const dateStr = now.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
+  const mc = MODE_COLORS[nexusMode] || MODE_COLORS.home;
+  const weatherIcon = weather?.icon ?? "—";
+  const weatherTemp = weather?.temp ?? "—";
+  const weatherCond = weather?.condition ?? "";
+  const weatherHiLo = weather && typeof weather.high === "number" && typeof weather.low === "number"
+    ? `H:${weather.high}° L:${weather.low}°` : "";
+
+  const currentSignal = signals[signalIndex];
+
+  const formatSignalTime = (iso) => {
+    try {
+      const d = new Date(iso);
+      if (Number.isNaN(d.getTime())) return iso;
+      const diff = Date.now() - d.getTime();
+      if (diff < 60_000) return "Just now";
+      if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+      if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+      return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    } catch { return iso; }
+  };
+
+  return (
+    <div className="relative flex-1 flex flex-col items-center justify-center" style={{ minHeight: "calc(100vh - 56px)" }}>
+      {/* Ambient background */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute w-96 h-96 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${mc.color}08 0%, transparent 70%)`, top: "20%", left: "30%", animation: "float 20s ease-in-out infinite" }} />
+        <div className="absolute w-64 h-64 rounded-full blur-3xl" style={{ background: `radial-gradient(circle, ${mc.color}05 0%, transparent 70%)`, bottom: "30%", right: "20%", animation: "float 25s ease-in-out infinite 5s" }} />
+      </div>
+
+      {/* Mode indicator */}
+      <div className="absolute top-6 left-8 flex items-center gap-3">
+        <span className="relative inline-flex" style={{ width: 8, height: 8 }}>
+          <span className="absolute inline-flex h-full w-full rounded-full" style={{ background: mc.color, opacity: 0.3, animation: "pulse 2s infinite" }} />
+          <span className="relative inline-flex rounded-full h-full w-full" style={{ background: mc.color, opacity: 0.8 }} />
+        </span>
+        <span className="text-xs tracking-widest uppercase" style={{ color: `${mc.color}90`, fontFamily: T.font.mono, letterSpacing: "0.2em" }}>{mc.label} Mode</span>
+        {modeOverride && <span className="text-[10px]" style={{ color: T.text.muted, fontFamily: T.font.mono }}>override</span>}
+      </div>
+
+      {/* Clock */}
+      <div className="text-center mb-6 relative z-10">
+        <div style={{ fontFamily: T.font.display, fontWeight: 200, fontSize: "min(16vw, 180px)", color: "#fff", lineHeight: 0.9, letterSpacing: "-0.04em", opacity: 0.95 }}>
+          {timeStr.replace(" AM", "").replace(" PM", "")}
+        </div>
+        <div className="flex items-center justify-center gap-4 mt-4">
+          <span style={{ fontFamily: T.font.display, fontWeight: 200, fontSize: "min(2.5vw, 24px)", color: T.text.tertiary }}>{timeStr.includes("AM") ? "AM" : "PM"}</span>
+          <div className="w-px h-5" style={{ background: "rgba(255,255,255,0.08)" }} />
+          <span style={{ fontFamily: T.font.display, fontWeight: 200, fontSize: "min(2.5vw, 24px)", color: T.text.muted }}>{dateStr}</span>
+        </div>
+      </div>
+
+      {/* Weather */}
+      <div className="flex items-center gap-3 mb-10 relative z-10">
+        <span style={{ fontSize: "24px" }}>{weatherIcon}</span>
+        <span style={{ fontFamily: T.font.display, fontWeight: 200, fontSize: "20px", color: T.text.secondary }}>{typeof weatherTemp === "number" ? `${weatherTemp}°` : weatherTemp}</span>
+        {weatherCond && <span style={{ fontFamily: T.font.display, fontWeight: 200, fontSize: "14px", color: T.text.muted }}>{weatherCond}</span>}
+        {weatherHiLo && (
+          <>
+            <div className="w-px h-4" style={{ background: "rgba(255,255,255,0.06)" }} />
+            <span style={{ fontFamily: T.font.mono, fontSize: "11px", color: T.text.muted }}>{weatherHiLo}</span>
+          </>
+        )}
+      </div>
+
+      {/* Signals ticker */}
+      <div className="absolute bottom-28 left-0 right-0 flex justify-center">
+        {currentSignal ? (
+          <div key={signalIndex} className="flex items-center gap-3" style={{ animation: "slideIn 0.5s ease" }}>
+            <span className="w-1.5 h-1.5 rounded-full" style={{ background: mc.color }} />
+            <span className="text-sm" style={{ color: T.text.tertiary }}>
+              <span style={{ color: T.text.secondary }}>{currentSignal.source}</span>{" "}{currentSignal.text}
+            </span>
+            <span className="text-xs" style={{ color: T.text.muted, fontFamily: T.font.mono }}>{formatSignalTime(currentSignal.time)}</span>
+          </div>
+        ) : (
+          <span className="text-sm" style={{ color: T.text.muted }}>No active signals</span>
+        )}
+      </div>
+
+      {/* Next goal */}
+      <div className="absolute bottom-16 left-0 right-0 flex justify-center">
+        <div className="flex items-center gap-3">
+          <span className="text-xs" style={{ color: T.text.muted, fontFamily: T.font.mono }}>NEXT</span>
+          <span className="text-sm" style={{ color: T.text.tertiary }}>{goals.find((g) => !g.done)?.label ?? "No goals — add from controller"}</span>
+        </div>
+      </div>
+
+      {/* Stats row */}
+      {(stocks.length > 0 || content.length > 0 || goals.length > 0) && (
+        <div className="absolute bottom-4 left-8 right-8 flex items-center justify-between">
+          {stocks.length > 0 && (
+            <div className="flex gap-3">
+              {stocks.slice(0, 4).map((s) => (
+                <span key={s.symbol} className="text-[10px]" style={{ fontFamily: T.font.mono, color: T.text.muted }}>
+                  {s.symbol}{" "}
+                  <span style={{ color: s.changePercent >= 0 ? T.accent.green : T.accent.red }}>
+                    {s.changePercent >= 0 ? "+" : ""}{s.changePercent.toFixed(1)}%
+                  </span>
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="flex gap-4">
+            {goals.length > 0 && <span className="text-[10px]" style={{ fontFamily: T.font.mono, color: T.text.muted }}>{goals.filter(g => g.done).length}/{goals.length} goals</span>}
+            {content.length > 0 && <span className="text-[10px]" style={{ fontFamily: T.font.mono, color: T.text.muted }}>{content.length} queued</span>}
+          </div>
+        </div>
+      )}
+
+      {/* Float animation */}
+      <style>{`@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }`}</style>
+    </div>
+  );
+};
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // MAIN SHELL
 // ═══════════════════════════════════════════════════════════════════════════════
 
 const MODULES = [
+  { id: "pulse", label: "Pulse", icon: Activity },
   { id: "home", label: "Home", icon: Home },
   { id: "energy", label: "Energy", icon: Zap },
   { id: "cameras", label: "Cameras", icon: Camera },
@@ -1281,13 +1436,23 @@ const MODULES = [
 ];
 
 export default function NexusOS() {
-  const [activeModule, setActiveModule] = useState("home");
+  const [activeModule, setActiveModule] = useState("pulse");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [agentOpen, setAgentOpen] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [localEntities, setLocalEntities] = useState(MOCK_ENTITIES);
   const [time, setTime] = useState(new Date());
   const [notifications, setNotifications] = useState([]);
+  const [modeOverride, setModeOverride] = useState(null);
+
+  // ─── Nexus Data (weather, signals, goals, content, stocks) ────
+  const { weather, signals, goals, content, stocks, refresh: refreshNexusData } = useNexusData();
+
+  // ─── Nexus Mode ───────────────────────────────────────────────
+  const nexusMode = determineMode(modeOverride);
+
+  // ─── WebSocket (phone controller talks to TV) ─────────────────
+  const { send: wsSend, connected: wsConnected, lastMessage } = useNexusSocket();
 
   // ─── Live HA Connection (SSE streaming with polling fallback) ──
   const [haConnected, setHaConnected] = useState(false);
@@ -1295,7 +1460,6 @@ export default function NexusOS() {
   const [haEntities, setHaEntities] = useState([]);
   const [haError, setHaError] = useState(null);
 
-  // Try SSE stream first, fall back to polling
   useEffect(() => {
     let source = null;
     let pollInterval = null;
@@ -1334,7 +1498,6 @@ export default function NexusOS() {
                 });
                 return next;
               });
-              // Push notification for security-relevant changes
               data.entities.forEach((e) => {
                 if (e.entity_id.startsWith("lock.") && e.state === "unlocked") {
                   addNotification("warning", `${e.attributes?.friendly_name || e.entity_id} was unlocked`);
@@ -1394,20 +1557,44 @@ export default function NexusOS() {
     };
   }, []);
 
+  // ─── React to WS messages from controller ─────────────────────
+  useEffect(() => {
+    if (!lastMessage) return;
+    const msg = lastMessage;
+    switch (msg.type) {
+      case "mode_switch":
+        setModeOverride(msg.mode);
+        break;
+      case "mode_auto":
+        setModeOverride(null);
+        break;
+      case "refresh":
+        refreshNexusData();
+        fetchHAStates();
+        break;
+      case "view_toggle":
+        if (msg.view === "pulse") setActiveModule("pulse");
+        else if (msg.view === "dashboard") setActiveModule("home");
+        break;
+      case "module_switch":
+        if (msg.module && MODULES.some((m) => m.id === msg.module)) {
+          setActiveModule(msg.module);
+        }
+        break;
+    }
+  }, [lastMessage]);
+
   // ─── Notifications ─────────────────────────────────────────────
   const addNotification = useCallback((type, message) => {
     const id = Date.now();
     setNotifications((prev) => [...prev.slice(-4), { id, type, message, time: new Date() }]);
-    // Auto-dismiss after 5 seconds
     setTimeout(() => {
       setNotifications((prev) => prev.filter((n) => n.id !== id));
     }, 5000);
   }, []);
 
-  // Use real entities when HA is connected, mock when not
   const entities = haConnected && haEntities.length > 0 ? haEntities : localEntities;
 
-  // Derive areas from real entities when connected
   const derivedAreas = useMemo(() => {
     if (!haConnected) return MOCK_AREAS;
     const areaSet = new Map();
@@ -1426,7 +1613,6 @@ export default function NexusOS() {
   // ─── Live HA toggle + scene activation ─────────────────────────
   const toggleHA = useCallback(async (entityId) => {
     if (!haConnected) {
-      // Fallback: local mock toggle
       setLocalEntities((prev) =>
         prev.map((e) => {
           if (e.entity_id !== entityId) return e;
@@ -1508,12 +1694,18 @@ export default function NexusOS() {
     return () => clearInterval(t);
   }, []);
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts: 0=auto, 1-6=mode, P=pulse, H=home, E=energy, C=cameras, A=automations
   useEffect(() => {
     const handler = (e) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") { e.preventDefault(); setCommandOpen(true); }
       if ((e.metaKey || e.ctrlKey) && e.key === "j") { e.preventDefault(); setAgentOpen((p) => !p); }
       if (e.key === "Escape") { setCommandOpen(false); }
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      const modeKeys = { "1": "morning", "2": "focus", "3": "home", "4": "evening", "5": "weekend", "6": "night" };
+      if (e.key === "0") { setModeOverride(null); return; }
+      if (modeKeys[e.key]) { setModeOverride(modeKeys[e.key]); return; }
+      const modKeys = { p: "pulse", h: "home", e: "energy", c: "cameras", a: "automations", s: "system" };
+      if (modKeys[e.key.toLowerCase()] && !e.metaKey && !e.ctrlKey) setActiveModule(modKeys[e.key.toLowerCase()]);
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
@@ -1521,6 +1713,7 @@ export default function NexusOS() {
 
   const renderModule = () => {
     switch (activeModule) {
+      case "pulse": return <PulseModule weather={weather} signals={signals} goals={goals} content={content} stocks={stocks} nexusMode={nexusMode} modeOverride={modeOverride} />;
       case "home": return <HomeModule entities={entities} onToggle={toggleHA} onActivateScene={activateScene} areas={derivedAreas} />;
       case "energy": return <EnergyModule />;
       case "cameras": return <CamerasModule />;
@@ -1608,6 +1801,7 @@ export default function NexusOS() {
             </h1>
             <div className="flex items-center gap-2">
               <Badge color={haConnected ? T.accent.green : T.accent.yellow}>{haConnected ? (haStreaming ? "HA Stream" : "HA Poll") : "Mock Data"}</Badge>
+              <Badge color={wsConnected ? T.accent.green : T.accent.red}>{wsConnected ? "WS" : "WS Off"}</Badge>
               <Badge color={T.accent.yellow}>{lightsOn} lights on</Badge>
             </div>
           </div>

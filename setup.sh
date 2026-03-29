@@ -17,5 +17,6 @@ node scripts/check-env.cjs || true
 echo "Next:"
 echo "  1. Edit .env.local — on the Mac mini brain use HA_URL=http://127.0.0.1:8123"
 echo "  2. docker compose up -d   # HA + Mosquitto"
-echo "  3. npm run dev  → http://localhost:3000/os   (or npm run build && npm run start)"
+echo "  3. npm run dev:all  → Next + WebSocket (phone /controller needs port 8080)"
+echo "     http://localhost:3000/ (TV)  http://localhost:3000/controller  http://localhost:3000/os (HA)"
 echo ""

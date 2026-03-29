@@ -8,7 +8,7 @@
   <array>
     <string>/opt/homebrew/bin/npm</string>
     <string>run</string>
-    <string>start</string>
+    <string>start:all</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/Users/YOUR_USER/Projects/nexus</string>

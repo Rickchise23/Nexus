@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#0a0a0f"/>
+  <circle cx="256" cy="256" r="114.80000000000001" fill="none" stroke="#60A5FA" stroke-width="7.68" opacity="0.6"/>
+  <circle cx="256" cy="256" r="45.92000000000001" fill="#60A5FA" opacity="0.9"/>
+  <text x="256" y="346.2" text-anchor="middle" font-family="system-ui, sans-serif" font-weight="200" font-size="36.9" fill="rgba(255,255,255,0.7)" letter-spacing="6.1499999999999995">NEXUS</text>
+</svg>
